@@ -33,6 +33,7 @@ main(int argc, char *argv[])
     close(pip[flag][WR]);
     for (int i = 2; i <= 35; i++)
         write(pip[!flag][WR], &i, sizeof(int));
+
     start:
     close(pip[!flag][WR]);
     close(pip[flag][RD]);
@@ -57,7 +58,7 @@ main(int argc, char *argv[])
     if (flag1) close(pip[!flag][RD]);
     close(pip[flag][RD]);
     close(pip[!flag][WR]);
-    // wait(0);
+    wait(0);
     exit(0);
     
 }
