@@ -77,6 +77,7 @@ int             piperead(struct pipe*, uint64, int);
 int             pipewrite(struct pipe*, uint64, int);
 
 // printf.c
+void            backtrace(void);
 void            printf(char*, ...);
 void            panic(char*) __attribute__((noreturn));
 void            printfinit(void);
@@ -145,6 +146,8 @@ void            trapinit(void);
 void            trapinithart(void);
 extern struct spinlock tickslock;
 void            usertrapret(void);
+int             sigalarm(int, void(*handler)());
+int             sigreturn(void);
 
 // uart.c
 void            uartinit(void);
