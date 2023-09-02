@@ -6,15 +6,34 @@
 #define FREE        0x0
 #define RUNNING     0x1
 #define RUNNABLE    0x2
+#define LOOPTIME    100
 
 #define STACK_SIZE  8192
 #define MAX_THREAD  4
 
+struct context {
+    uint64 ra;
+    uint64 sp;
+
+    // callee-saved
+    uint64 s0;
+    uint64 s1;
+    uint64 s2;
+    uint64 s3;
+    uint64 s4;
+    uint64 s5;
+    uint64 s6;
+    uint64 s7;
+    uint64 s8;
+    uint64 s9;
+    uint64 s10;
+    uint64 s11;
+};
 
 struct thread {
   char       stack[STACK_SIZE]; /* the thread's stack */
   int        state;             /* FREE, RUNNING, RUNNABLE */
-
+  struct context ctx;
 };
 struct thread all_thread[MAX_THREAD];
 struct thread *current_thread;
@@ -33,7 +52,7 @@ thread_init(void)
 }
 
 void 
-thread_schedule(void)
+thread_schedule(int type, int num)
 {
   struct thread *t, *next_thread;
 
@@ -63,6 +82,9 @@ thread_schedule(void)
      * Invoke thread_switch to switch from t to next_thread:
      * thread_switch(??, ??);
      */
+    // printf("up: type is %c, num is %d\n", type == 1 ? 'a' : (type == 2 ? 'b' : 'c'), num);
+    thread_switch((uint64)&t->ctx, (uint64)&current_thread->ctx);
+    // printf("down: type is %c, num is %d\n", type == 1 ? 'a' : (type == 2 ? 'b' : 'c'), num);
   } else
     next_thread = 0;
 }
@@ -77,13 +99,15 @@ thread_create(void (*func)())
   }
   t->state = RUNNABLE;
   // YOUR CODE HERE
+  t->ctx.ra = (uint64)func;
+  t->ctx.sp = (uint64)&(t->stack[STACK_SIZE]);
 }
 
 void 
-thread_yield(void)
+thread_yield(int type, int num)
 {
   current_thread->state = RUNNABLE;
-  thread_schedule();
+  thread_schedule(type, num);
 }
 
 volatile int a_started, b_started, c_started;
@@ -96,17 +120,17 @@ thread_a(void)
   printf("thread_a started\n");
   a_started = 1;
   while(b_started == 0 || c_started == 0)
-    thread_yield();
+    thread_yield(1, a_n);
   
-  for (i = 0; i < 100; i++) {
+  for (i = 0; i < LOOPTIME; i++) {
     printf("thread_a %d\n", i);
     a_n += 1;
-    thread_yield();
+    thread_yield(1, a_n);
   }
   printf("thread_a: exit after %d\n", a_n);
 
   current_thread->state = FREE;
-  thread_schedule();
+  thread_schedule(1, a_n);
 }
 
 void 
@@ -116,17 +140,17 @@ thread_b(void)
   printf("thread_b started\n");
   b_started = 1;
   while(a_started == 0 || c_started == 0)
-    thread_yield();
+    thread_yield(2, b_n);
   
-  for (i = 0; i < 100; i++) {
+  for (i = 0; i < LOOPTIME; i++) {
     printf("thread_b %d\n", i);
     b_n += 1;
-    thread_yield();
+    thread_yield(2, b_n);
   }
   printf("thread_b: exit after %d\n", b_n);
 
   current_thread->state = FREE;
-  thread_schedule();
+  thread_schedule(2, b_n);
 }
 
 void 
@@ -136,17 +160,17 @@ thread_c(void)
   printf("thread_c started\n");
   c_started = 1;
   while(a_started == 0 || b_started == 0)
-    thread_yield();
+    thread_yield(3, c_n);
   
-  for (i = 0; i < 100; i++) {
+  for (i = 0; i < LOOPTIME; i++) {
     printf("thread_c %d\n", i);
     c_n += 1;
-    thread_yield();
+    thread_yield(3, c_n);
   }
   printf("thread_c: exit after %d\n", c_n);
 
   current_thread->state = FREE;
-  thread_schedule();
+  thread_schedule(3, c_n);
 }
 
 int 
@@ -158,6 +182,6 @@ main(int argc, char *argv[])
   thread_create(thread_a);
   thread_create(thread_b);
   thread_create(thread_c);
-  thread_schedule();
+  thread_schedule(0, 0);
   exit(0);
 }

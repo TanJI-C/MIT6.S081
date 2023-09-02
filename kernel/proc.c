@@ -523,7 +523,7 @@ void
 yield(void)
 {
   struct proc *p = myproc();
-  acquire(&p->lock);
+  acquire(&p->lock); //? 首先要做的是获取锁，防止进行后面的修改时，其他CPU修改。
   p->state = RUNNABLE;
   sched();
   release(&p->lock);

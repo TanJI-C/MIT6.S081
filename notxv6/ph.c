@@ -8,6 +8,8 @@
 #define NBUCKET 5
 #define NKEYS 100000
 
+pthread_mutex_t locks[NBUCKET];
+
 struct entry {
   int key;
   int value;
@@ -24,7 +26,7 @@ now()
  gettimeofday(&tv, 0);
  return tv.tv_sec + tv.tv_usec / 1000000.0;
 }
-
+//? 使用头插法插入哈希表
 static void 
 insert(int key, int value, struct entry **p, struct entry *n)
 {
@@ -42,6 +44,8 @@ void put(int key, int value)
 
   // is the key already present?
   struct entry *e = 0;
+  //! change: 需要将value插入第i个bucket中，因此需要上个锁先
+  pthread_mutex_lock(&locks[i]);
   for (e = table[i]; e != 0; e = e->next) {
     if (e->key == key)
       break;
@@ -53,6 +57,7 @@ void put(int key, int value)
     // the new is new.
     insert(key, value, &table[i], table[i]);
   }
+  pthread_mutex_unlock(&locks[i]);
 }
 
 static struct entry*
@@ -62,9 +67,12 @@ get(int key)
 
 
   struct entry *e = 0;
+  //! change: add lock
+  pthread_mutex_lock(&locks[i]);
   for (e = table[i]; e != 0; e = e->next) {
     if (e->key == key) break;
   }
+  pthread_mutex_unlock(&locks[i]);
 
   return e;
 }
@@ -115,6 +123,10 @@ main(int argc, char *argv[])
     keys[i] = random();
   }
 
+  //! change: init lock
+  for (int i = 0; i < NBUCKET; i++)
+    pthread_mutex_init(&locks[i], NULL);
+  
   //
   // first the puts
   //
